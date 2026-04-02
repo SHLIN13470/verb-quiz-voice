@@ -372,7 +372,7 @@ function playSentence(){
   if(!window.speechSynthesis){alert('您的瀏覽器不支援語音合成，請改用 Chrome 或 Safari。');return;}
   if(currentUtterance){window.speechSynthesis.cancel();}
   const q=queue[0];
-  const text=q.s.replace('[B]',getCorrect(q));
+  const text=q.s.replace('[B]',getCorrect(q).split('/')[0].trim());
   const utter=new SpeechSynthesisUtterance(text);
   utter.lang='en-GB';
   utter.rate=speechRate;
