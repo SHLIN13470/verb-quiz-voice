@@ -182,8 +182,10 @@
 
     <!-- Listen mode -->
     <div id="listen-ui" class="hidden">
-      <div class="listen-card">
-        <div class="play-hint">聽完整個句子<br>填入正確的動詞形態</div>
+      <div class="sentence-card">
+        <div class="sentence" id="sentence-listen"></div>
+      </div>
+      <div class="listen-card" style="padding:16px 20px; gap:12px;">
         <button class="play-btn" id="play-btn" onclick="playSentence()">▶</button>
         <div class="speed-row">
           <button class="speed-chip active" onclick="setSpeed(0.75, this)">慢速 0.75x</button>
@@ -412,6 +414,7 @@ function showQ(){
   document.getElementById('prog').style.width=(total?Math.round((done/total)*100):0)+'%';
   document.getElementById('verb-chip').textContent=q.v;
   document.getElementById('sentence').innerHTML=q.s.replace('[B]','<b>______</b>');
+  document.getElementById('sentence-listen').innerHTML=q.s.replace('[B]','<b>______</b>');
   document.getElementById('t-base').textContent=q.v;
   document.getElementById('t-past').textContent=q.past;
   document.getElementById('t-pp').textContent=q.pp;
