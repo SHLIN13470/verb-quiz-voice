@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>動詞三態測驗</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f0ede8;
+    color: #111;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .mode-selector {
+    display: flex;
+    background: #e4e0d8;
+    border-radius: 10px;
+    padding: 3px;
+    margin: 0 0 0;
+  }
+  .mode-btn {
+    flex: 1; height: 34px; border: none; border-radius: 8px;
+    background: transparent; color: #888; font-size: 13px; font-weight: 500;
+    cursor: pointer; font-family: inherit; transition: background 0.15s, color 0.15s;
+  }
+  .mode-btn.active { background: #fff; color: #111; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .topbar {
+    position: sticky; top: 0; z-index: 10;
+    background: #fff; border-bottom: 1px solid #e4e0d8;
+    padding: 12px 16px 10px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .topbar-row { display: flex; justify-content: space-between; align-items: center; }
+  .topbar-title { font-size: 15px; font-weight: 600; color: #111; }
+  .counter { font-size: 13px; color: #888; }
+  .progress-wrap { background: #edeae4; border-radius: 99px; height: 4px; }
+  .progress-fill { background: #1D9E75; height: 4px; border-radius: 99px; transition: width 0.4s; }
+  .stats-row { display: flex; gap: 8px; padding: 10px 16px; }
+  .stat-chip { flex: 1; background: #fff; border-radius: 10px; padding: 8px 0; text-align: center; border: 1px solid #e4e0d8; }
+  .stat-num { font-size: 20px; font-weight: 700; line-height: 1; }
+  .stat-num.c { color: #1D9E75; }
+  .stat-num.w { color: #e24b4a; }
+  .stat-num.r { color: #888; }
+  .stat-label { font-size: 11px; color: #aaa; margin-top: 2px; }
+  .main { flex: 1; padding: 12px 16px 160px; }
+  .verb-pill {
+    display: inline-block; background: #e8f4ff; color: #185FA5;
+    border-radius: 99px; padding: 4px 14px; font-size: 14px; font-weight: 600; margin-bottom: 14px;
+  }
+  .sentence-card {
+    background: #fff; border-radius: 16px; padding: 20px;
+    border: 1px solid #e4e0d8; margin-bottom: 14px;
+  }
+  .sentence { font-size: 17px; line-height: 1.8; color: #111; }
+  .sentence b { color: #185FA5; font-weight: 700; }
+  .listen-card {
+    background: #fff; border-radius: 16px; border: 1px solid #e4e0d8;
+    padding: 28px 20px; margin-bottom: 14px;
+    display: flex; flex-direction: column; align-items: center; gap: 18px;
+  }
+  .play-hint { font-size: 13px; color: #aaa; text-align: center; line-height: 1.5; }
+  .play-btn {
+    width: 76px; height: 76px; border-radius: 50%; border: none;
+    background: #1D9E75; color: #fff; font-size: 30px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 20px rgba(29,158,117,0.3); transition: background 0.15s, transform 0.1s;
+  }
+  .play-btn:active { transform: scale(0.93); }
+  .play-btn.playing { background: #185FA5; }
+  .speed-row { display: flex; gap: 8px; }
+  .speed-chip {
+    padding: 5px 13px; border-radius: 99px; border: 1px solid #ddd;
+    background: #fff; color: #888; font-size: 12px; cursor: pointer; font-family: inherit;
+  }
+  .speed-chip.active { background: #e8f4ff; color: #185FA5; border-color: #b5d4f4; }
+  .sentence-reveal {
+    background: #f5f2ec; border-radius: 12px; padding: 14px 16px;
+    font-size: 15px; line-height: 1.7; color: #555; margin-bottom: 14px;
+  }
+  .sentence-reveal b { color: #185FA5; font-weight: 700; }
+  .tense-card { background: #fff; border-radius: 14px; border: 1px solid #e4e0d8; overflow: hidden; margin-bottom: 14px; }
+  .tense-table { width: 100%; border-collapse: collapse; }
+  .tense-table th { padding: 8px 14px; background: #f5f2ec; font-size: 12px; font-weight: 500; color: #888; text-align: left; border-bottom: 1px solid #e4e0d8; }
+  .tense-table td { padding: 10px 14px; font-size: 15px; color: #111; }
+  .tense-table .hl { color: #185FA5; font-weight: 600; }
+  .feedback-bar { border-radius: 12px; padding: 12px 16px; font-size: 15px; font-weight: 500; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+  .feedback-bar.correct { background: #e6f7ef; color: #0F6E56; }
+  .feedback-bar.wrong { background: #fdecea; color: #a32d2d; }
+  .action-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #fff; border-top: 1px solid #e4e0d8;
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+  .input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .answer-input {
+    flex: 1; height: 48px; border: 1.5px solid #ddd; border-radius: 12px;
+    padding: 0 16px; font-size: 16px; color: #111; background: #f9f8f5;
+    outline: none; -webkit-appearance: none; transition: border-color 0.15s, background 0.15s;
+  }
+  .answer-input:focus { border-color: #1D9E75; background: #fff; box-shadow: 0 0 0 3px rgba(29,158,117,0.12); }
+  .answer-input.correct { border-color: #1D9E75; background: #f0faf5; color: #085041; }
+  .answer-input.wrong { border-color: #e24b4a; background: #fff5f5; color: #a32d2d; }
+  .answer-input:disabled { opacity: 1; }
+  .btn-confirm {
+    height: 48px; padding: 0 20px; border-radius: 12px; border: none;
+    background: #1D9E75; color: #fff; font-size: 16px; font-weight: 600;
+    cursor: pointer; white-space: nowrap; font-family: inherit;
+  }
+  .btn-confirm:active { transform: scale(0.97); }
+  .btn-confirm:disabled { background: #b2d8cc; cursor: not-allowed; }
+  .bottom-row { display: flex; gap: 8px; }
+  .btn-next {
+    flex: 1; height: 48px; border-radius: 12px; border: none;
+    background: #1D9E75; color: #fff; font-size: 16px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+  .btn-next:active { transform: scale(0.97); }
+  .btn-next:disabled { background: #ddd; color: #aaa; cursor: not-allowed; }
+  .btn-secondary {
+    height: 48px; padding: 0 14px; border-radius: 12px;
+    border: 1.5px solid #ddd; background: #fff; color: #555;
+    font-size: 13px; cursor: pointer; font-family: inherit; white-space: nowrap;
+  }
+  .btn-secondary:active { transform: scale(0.97); }
+  #result-section { display: none; padding: 24px 16px; flex-direction: column; align-items: center; }
+  #result-section.show { display: flex; }
+  .result-emoji { font-size: 56px; margin-bottom: 12px; }
+  .result-score { font-size: 48px; font-weight: 800; color: #1D9E75; line-height: 1; }
+  .result-sub { font-size: 15px; color: #888; margin: 6px 0 24px; }
+  .result-btns { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 360px; }
+  .btn-full { width: 100%; height: 52px; border-radius: 14px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .btn-full.green { background: #1D9E75; color: #fff; }
+  .btn-full.red { background: #e24b4a; color: #fff; display: none; }
+  .btn-full:active { transform: scale(0.98); }
+  .wrong-section { width: 100%; margin-top: 20px; }
+  .wrong-section-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+  .wrong-item { background: #fff; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; border: 1px solid #e4e0d8; }
+  .wrong-verb { font-size: 12px; font-weight: 600; color: #e24b4a; margin-bottom: 4px; }
+  .wrong-ans { font-size: 15px; color: #185FA5; font-weight: 600; }
+  .wrong-full { font-size: 12px; color: #aaa; margin-top: 2px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="quiz-section">
+  <div class="topbar">
+    <div class="topbar-row">
+      <span class="topbar-title" id="mode-label">動詞三態測驗</span>
+      <span class="counter" id="q-counter">1 / 100</span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-fill" id="prog" style="width:0%"></div>
+    </div>
+    <div class="mode-selector">
+      <button class="mode-btn active" id="btn-mode-read" onclick="switchMode('read')">📖 閱讀填空</button>
+      <button class="mode-btn" id="btn-mode-listen" onclick="switchMode('listen')">🔊 聽打練習</button>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-chip"><div class="stat-num c" id="sc">0</div><div class="stat-label">答對</div></div>
+    <div class="stat-chip"><div class="stat-num w" id="sw">0</div><div class="stat-label">答錯</div></div>
+    <div class="stat-chip"><div class="stat-num r" id="sr">100</div><div class="stat-label">剩餘</div></div>
+  </div>
+
+  <div class="main">
+    <!-- Verb chip: shown in read mode, hidden in listen mode -->
+    <div id="verb-chip-wrap"><span class="verb-pill" id="verb-chip"></span></div>
+
+    <!-- Read mode -->
+    <div id="read-ui">
+      <div class="sentence-card">
+        <div class="sentence" id="sentence"></div>
+      </div>
+    </div>
+
+    <!-- Listen mode -->
+    <div id="listen-ui" class="hidden">
+      <div class="listen-card">
+        <div class="play-hint">聽完整個句子<br>填入正確的動詞形態</div>
+        <button class="play-btn" id="play-btn" onclick="playSentence()">▶</button>
+        <div class="speed-row">
+          <button class="speed-chip active" onclick="setSpeed(0.75, this)">慢速 0.75x</button>
+          <button class="speed-chip" onclick="setSpeed(1, this)">正常 1x</button>
+          <button class="speed-chip" onclick="setSpeed(1.25, this)">快速 1.25x</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="feedback-wrap"></div>
+
+    <!-- Full sentence revealed after answering in listen mode -->
+    <div id="sentence-reveal" class="sentence-reveal hidden"></div>
+
+    <div id="tense-wrap" class="hidden">
+      <div class="tense-card">
+        <table class="tense-table">
+          <tr><th>原形</th><th>過去式</th><th>過去分詞</th></tr>
+          <tr><td id="t-base"></td><td id="t-past" class="hl"></td><td id="t-pp" class="hl"></td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <div class="input-row">
+      <input type="text" id="ans-input" class="answer-input" placeholder="輸入答案..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+      <button class="btn-confirm" id="btn-check" onclick="checkAnswer()">確認</button>
+    </div>
+    <div class="bottom-row">
+      <button class="btn-next" id="btn-next" onclick="nextQ()" disabled>下一題 →</button>
+      <button class="btn-secondary" onclick="skipQ()">跳過</button>
+      <button class="btn-secondary" onclick="toggleTable()">三態表</button>
+    </div>
+  </div>
+</div>
+
+<div id="result-section">
+  <div class="result-emoji" id="result-emoji">🎉</div>
+  <div class="result-score" id="final-score"></div>
+  <div class="result-sub" id="final-sub"></div>
+  <div class="result-btns">
+    <button class="btn-full green" onclick="restartAll()">重新全部練習</button>
+    <button class="btn-full red" id="btn-retry" onclick="retryWrong()"></button>
+  </div>
+  <div class="wrong-section" id="wrong-section" style="display:none;">
+    <div class="wrong-section-title">答錯的題目</div>
+    <div id="wrong-items"></div>
+  </div>
+</div>
+
+<script>
+const ALL_Q=[
+  {v:"arise",s:"Many complications have [B] from the new taxation laws recently.",past:"arose",pp:"arisen",need:"pp"},
+  {v:"undertake",s:"The researchers [B] a comprehensive study on renewable energy last year.",past:"undertook",pp:"undertaken",need:"past"},
+  {v:"shrink",s:"The natural habitat of the polar bear has [B] significantly over the past century.",past:"shrank",pp:"shrunk",need:"pp"},
+  {v:"broadcast",s:"The controversial interview was [B] live across multiple international networks.",past:"broadcast",pp:"broadcast",need:"pp"},
+  {v:"forbid",s:"The school principal strictly [B] the use of smartphones during examinations yesterday.",past:"forbade",pp:"forbidden",need:"past"},
+  {v:"seek",s:"Throughout history, humanity has constantly [B] to understand the universe.",past:"sought",pp:"sought",need:"pp"},
+  {v:"implement",s:"The updated safety regulations were successfully [B] by the local council.",past:"implemented",pp:"implemented",need:"pp"},
+  {v:"undergo",s:"The entire public transport system has [B] a massive transformation recently.",past:"underwent",pp:"undergone",need:"pp"},
+  {v:"withdraw",s:"The multinational corporation suddenly [B] all its investments from the region in 2022.",past:"withdrew",pp:"withdrawn",need:"past"},
+  {v:"shed",s:"The recent documentary has [B] new light on the complexities of climate change.",past:"shed",pp:"shed",need:"pp"},
+  {v:"offset",s:"The carbon emissions produced by the flight were completely [B] by planting trees.",past:"offset",pp:"offset",need:"pp"},
+  {v:"strive",s:"For decades, the organization has [B] to eradicate poverty in rural areas.",past:"strove",pp:"striven",need:"pp"},
+  {v:"thrive",s:"Despite the harsh economic conditions, local businesses [B] unexpectedly last quarter.",past:"thrived",pp:"thrived",need:"past"},
+  {v:"weave",s:"The author beautifully [B] multiple historical events into a captivating narrative in her latest book.",past:"wove",pp:"woven",need:"past"},
+  {v:"flee",s:"Thousands of citizens had already [B] the city before the hurricane struck.",past:"fled",pp:"fled",need:"pp"},
+  {v:"cling",s:"The child [B] tightly to his mother's hand while crossing the busy street this morning.",past:"clung",pp:"clung",need:"past"},
+  {v:"fling",s:"In a fit of frustration, he [B] the documents onto the desk and walked out of the room.",past:"flung",pp:"flung",need:"past"},
+  {v:"grind",s:"The coffee beans must be [B] finely to produce a high-quality espresso.",past:"ground",pp:"ground",need:"pp"},
+  {v:"strike",s:"A devastating earthquake [B] the coastal region early yesterday morning.",past:"struck",pp:"struck",need:"past"},
+  {v:"swear",s:"The newly elected president was [B] in during a formal ceremony yesterday.",past:"swore",pp:"sworn",need:"pp"},
+  {v:"tear",s:"The original manuscript was accidentally [B] during the relocation of the library.",past:"tore",pp:"torn",need:"pp"},
+  {v:"cost",s:"Building the new infrastructure [B] the government billions of dollars last year.",past:"cost",pp:"cost",need:"past"},
+  {v:"split",s:"The political party has [B] into two distinct factions over the environmental policy.",past:"split",pp:"split",need:"pp"},
+  {v:"spread",s:"The rumor had already [B] throughout the entire department before the manager arrived.",past:"spread",pp:"spread",need:"pp"},
+  {v:"beat",s:"The reigning champion was finally [B] in the final round of the tournament.",past:"beat",pp:"beaten",need:"pp"},
+  {v:"bite",s:"The hikers were severely [B] by mosquitoes during their trek through the jungle.",past:"bit",pp:"bitten",need:"pp"},
+  {v:"hide",s:"The ancient artifacts remained [B] deep within the cave for centuries.",past:"hid",pp:"hidden",need:"pp"},
+  {v:"prohibit",s:"Smoking is strictly [B] in all enclosed public spaces by law.",past:"prohibited",pp:"prohibited",need:"pp"},
+  {v:"alleviate",s:"The new medication effectively [B] the patient's chronic pain within hours.",past:"alleviated",pp:"alleviated",need:"past"},
+  {v:"deteriorate",s:"The patient's condition [B] rapidly immediately after the surgery.",past:"deteriorated",pp:"deteriorated",need:"past"},
+  {v:"soar",s:"Housing prices in the metropolitan area [B] to unprecedented levels last year.",past:"soared",pp:"soared",need:"past"},
+  {v:"plunge",s:"The stock market unexpectedly [B] following the announcement of the new tariff.",past:"plunged",pp:"plunged",need:"past"},
+  {v:"fluctuate",s:"The currency exchange rates have [B] wildly over the past few weeks.",past:"fluctuated",pp:"fluctuated",need:"pp"},
+  {v:"foresee",s:"No one had [B] such a catastrophic outcome.",past:"foresaw",pp:"foreseen",need:"pp"},
+  {v:"misunderstand",s:"The professor realized that her instructions had been completely [B] by the students.",past:"misunderstood",pp:"misunderstood",need:"pp"},
+  {v:"overcome",s:"The community successfully [B] the initial challenges of the reconstruction project.",past:"overcame",pp:"overcome",need:"past"},
+  {v:"override",s:"The committee eventually [B] the chairman's decision due to budget constraints.",past:"overrode",pp:"overridden",need:"past"},
+  {v:"oversee",s:"The construction of the new bridge was personally [B] by the chief engineer.",past:"oversaw",pp:"overseen",need:"pp"},
+  {v:"outgrow",s:"The company has rapidly [B] its current office space and requires a larger building.",past:"outgrew",pp:"outgrown",need:"pp"},
+  {v:"rewrite",s:"The entire legal contract had to be [B] to ensure absolute clarity.",past:"rewrote",pp:"rewritten",need:"pp"},
+  {v:"convey",s:"The artist's profound sense of isolation was perfectly [B] through his dark paintings.",past:"conveyed",pp:"conveyed",need:"pp"},
+  {v:"formulate",s:"A new strategy was carefully [B] to tackle the rising unemployment rate.",past:"formulated",pp:"formulated",need:"pp"},
+  {v:"bear",s:"The structural columns have [B] the weight of the massive roof for over a century.",past:"bore",pp:"borne",need:"pp"},
+  {v:"lay",s:"The foundation for the new hospital was officially [B] last month.",past:"laid",pp:"laid",need:"pp"},
+  {v:"lie",s:"The old ruins have [B] undisturbed at the bottom of the ocean for centuries.",past:"lay",pp:"lain",need:"pp"},
+  {v:"wind",s:"The river [B] its way through the dense forest before reaching the sea.",past:"wound",pp:"wound",need:"past"},
+  {v:"bind",s:"The two nations are inextricably [B] together by a shared history and culture.",past:"bound",pp:"bound",need:"pp"},
+  {v:"stick",s:"The controversial label has [B] to the politician throughout his entire career.",past:"stuck",pp:"stuck",need:"pp"},
+  {v:"sweep",s:"A wave of technological innovation has [B] across the global manufacturing industry.",past:"swept",pp:"swept",need:"pp"},
+  {v:"tackle",s:"The government has finally [B] the longstanding issue of inadequate public housing.",past:"tackled",pp:"tackled",need:"pp"},
+  {v:"cast",s:"The sudden economic downturn has [B] doubt on the viability of the project.",past:"cast",pp:"cast",need:"pp"},
+  {v:"draw",s:"A definitive conclusion can only be [B] after gathering sufficient evidence.",past:"drew",pp:"drawn",need:"pp"},
+  {v:"drive",s:"In recent years, technological innovation has [B] economic growth in many developing nations.",past:"drove",pp:"driven",need:"pp"},
+  {v:"fall",s:"The unemployment rate [B] sharply during the third quarter of last year.",past:"fell",pp:"fallen",need:"past"},
+  {v:"yield",s:"The extensive agricultural research eventually [B] a more resilient crop variety.",past:"yielded",pp:"yielded",need:"past"},
+  {v:"grow",s:"The proportion of elderly people in the population has [B] significantly since 2000.",past:"grew",pp:"grown",need:"pp"},
+  {v:"hold",s:"The international summit on climate change was [B] in Geneva last month.",past:"held",pp:"held",need:"pp"},
+  {v:"lead",s:"The widespread use of social media has [B] to a decrease in face-to-face communication.",past:"led",pp:"led",need:"pp"},
+  {v:"leave",s:"Following the factory closure, hundreds of skilled workers were [B] unemployed.",past:"left",pp:"left",need:"pp"},
+  {v:"lose",s:"During the financial crisis, many investors [B] their entire life savings.",past:"lost",pp:"lost",need:"past"},
+  {v:"mean",s:"The introduction of the new curriculum [B] that teachers had to adapt their methods immediately.",past:"meant",pp:"meant",need:"past"},
+  {v:"meet",s:"In order to succeed, all the strict criteria must be [B] by the applicants.",past:"met",pp:"met",need:"pp"},
+  {v:"pay",s:"In modern education, more attention is [B] to critical thinking than rote memorization.",past:"paid",pp:"paid",need:"pp"},
+  {v:"prove",s:"The government's intervention has [B] to be highly effective in curbing inflation.",past:"proved",pp:"proved/proven",need:"pp"},
+  {v:"quit",s:"Over the past year, a significant number of healthcare professionals have [B] their jobs due to burnout.",past:"quit",pp:"quit",need:"pp"},
+  {v:"shut",s:"The obsolete power plant was permanently [B] down to reduce carbon emissions.",past:"shut",pp:"shut",need:"pp"},
+  {v:"rise",s:"Global sea levels have [B] at an alarming rate over the last few decades.",past:"rose",pp:"risen",need:"pp"},
+  {v:"run",s:"The successful marketing campaign was [B] entirely by a team of young graduates.",past:"ran",pp:"run",need:"pp"},
+  {v:"set",s:"A new precedent was [B] by the supreme court's landmark ruling yesterday.",past:"set",pp:"set",need:"pp"},
+  {v:"show",s:"Recent psychological studies have clearly [B] the link between stress and poor academic performance.",past:"showed",pp:"shown",need:"pp"},
+  {v:"sink",s:"A substantial amount of public funding was [B] into the failed infrastructure project.",past:"sank",pp:"sunk",need:"pp"},
+  {v:"slide",s:"The company's profit margins [B] steadily throughout the previous fiscal year.",past:"slid",pp:"slid",need:"past"},
+  {v:"spend",s:"Billions of dollars are [B] annually on space exploration by developed countries.",past:"spent",pp:"spent",need:"pp"},
+  {v:"spring",s:"Numerous eco-friendly startups have [B] up across the country in response to environmental concerns.",past:"sprang",pp:"sprung",need:"pp"},
+  {v:"stand",s:"The ancient fortress has [B] the test of time, remaining intact for centuries.",past:"stood",pp:"stood",need:"pp"},
+  {v:"steal",s:"Highly sensitive corporate data was [B] during the cyberattack last week.",past:"stole",pp:"stolen",need:"pp"},
+  {v:"swell",s:"The urban population had [B] beyond the city's capacity before new housing policies were introduced.",past:"swelled",pp:"swollen",need:"pp"},
+  {v:"swing",s:"Public opinion quickly [B] in favor of the opposition party after the scandal was revealed.",past:"swung",pp:"swung",need:"past"},
+  {v:"take",s:"Immediate and decisive measures must be [B] to combat the rising crime rates.",past:"took",pp:"taken",need:"pp"},
+  {v:"teach",s:"Important life skills, such as financial literacy, should be [B] in high schools.",past:"taught",pp:"taught",need:"pp"},
+  {v:"throw",s:"The entire transportation network was [B] into chaos by the heavy snowstorm.",past:"threw",pp:"thrown",need:"pp"},
+  {v:"understand",s:"The profound implications of artificial intelligence are not yet fully [B] by the general public.",past:"understood",pp:"understood",need:"pp"},
+  {v:"wear",s:"The old suspension bridge has [B] out and requires immediate structural reinforcement.",past:"wore",pp:"worn",need:"pp"},
+  {v:"win",s:"The prestigious architectural contract was ultimately [B] by a local firm.",past:"won",pp:"won",need:"pp"},
+  {v:"write",s:"The original draft of the proposal was [B] by a panel of independent experts.",past:"wrote",pp:"written",need:"pp"},
+  {v:"foster",s:"A collaborative learning environment can be [B] by encouraging group discussions.",past:"fostered",pp:"fostered",need:"pp"},
+  {v:"accelerate",s:"The transition to renewable energy has [B] rapidly in recent years.",past:"accelerated",pp:"accelerated",need:"pp"},
+  {v:"abandon",s:"Traditional farming techniques were largely [B] following the introduction of modern machinery.",past:"abandoned",pp:"abandoned",need:"pp"},
+  {v:"acquire",s:"Fluency in a second language is best [B] through consistent immersion and practice.",past:"acquired",pp:"acquired",need:"pp"},
+  {v:"attribute",s:"The noticeable drop in air pollution can be [B] to the new emission regulations.",past:"attributed",pp:"attributed",need:"pp"},
+  {v:"compel",s:"Consumers are often [B] to purchase unnecessary items by aggressive advertising.",past:"compelled",pp:"compelled",need:"pp"},
+  {v:"constitute",s:"The sudden demographic shift [B] a major challenge for the healthcare system last year.",past:"constituted",pp:"constituted",need:"past"},
+  {v:"deplete",s:"Our natural groundwater reserves have been severely [B] due to over-extraction.",past:"depleted",pp:"depleted",need:"pp"},
+  {v:"disrupt",s:"Global supply chains were heavily [B] by the unprecedented pandemic.",past:"disrupted",pp:"disrupted",need:"pp"},
+  {v:"embrace",s:"Remote working arrangements have been widely [B] by both employers and employees globally.",past:"embraced",pp:"embraced",need:"pp"},
+  {v:"evolve",s:"Over millions of years, human societies have [B] from hunter-gatherer groups to complex civilizations.",past:"evolved",pp:"evolved",need:"pp"},
+  {v:"mitigate",s:"The devastating effects of the drought could have been [B] if early warnings were heeded.",past:"mitigated",pp:"mitigated",need:"pp"},
+  {v:"perceive",s:"Vocational education is often incorrectly [B] as inferior to a traditional university degree.",past:"perceived",pp:"perceived",need:"pp"},
+  {v:"retain",s:"In a competitive market, it is crucial that highly skilled employees are [B].",past:"retained",pp:"retained",need:"pp"},
+  {v:"trigger",s:"The central bank's decision to raise interest rates immediately [B] a decline in consumer spending.",past:"triggered",pp:"triggered",need:"past"},
+];
+
+let queue=[],wrongList=[],correct=0,wrong=0,answered=0,checked=false,isRetry=false,tableVisible=false;
+let currentMode='read';
+let speechRate=0.75;
+let currentUtterance=null;
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function getCorrect(q){return q.need==='pp'?q.pp:q.past;}
+
+function switchMode(mode){
+  currentMode=mode;
+  document.getElementById('btn-mode-read').classList.toggle('active',mode==='read');
+  document.getElementById('btn-mode-listen').classList.toggle('active',mode==='listen');
+  document.getElementById('read-ui').classList.toggle('hidden',mode==='listen');
+  document.getElementById('listen-ui').classList.toggle('hidden',mode==='read');
+  document.getElementById('sentence-reveal').classList.add('hidden');
+  document.getElementById('verb-chip-wrap').classList.toggle('hidden',mode==='listen');
+  if(currentUtterance){window.speechSynthesis.cancel();}
+  const btn=document.getElementById('play-btn');
+  if(btn){btn.textContent='▶';btn.classList.remove('playing');}
+}
+
+function setSpeed(rate,el){
+  speechRate=rate;
+  document.querySelectorAll('.speed-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function playSentence(){
+  if(!window.speechSynthesis){alert('您的瀏覽器不支援語音合成，請改用 Chrome 或 Safari。');return;}
+  if(currentUtterance){window.speechSynthesis.cancel();}
+  const q=queue[0];
+  const text=q.s.replace('[B]',getCorrect(q));
+  const utter=new SpeechSynthesisUtterance(text);
+  utter.lang='en-GB';
+  utter.rate=speechRate;
+  currentUtterance=utter;
+  const btn=document.getElementById('play-btn');
+  btn.textContent='⏸';btn.classList.add('playing');
+  utter.onend=()=>{btn.textContent='▶';btn.classList.remove('playing');currentUtterance=null;};
+  utter.onerror=()=>{btn.textContent='▶';btn.classList.remove('playing');currentUtterance=null;};
+  window.speechSynthesis.speak(utter);
+}
+
+function init(qs,retry){
+  queue=[...qs];wrongList=[];correct=0;wrong=0;answered=0;isRetry=retry;
+  document.getElementById('sc').textContent=0;
+  document.getElementById('sw').textContent=0;
+  document.getElementById('sr').textContent=queue.length;
+  document.getElementById('mode-label').textContent=retry?'錯題重練':'動詞三態測驗';
+  document.getElementById('result-section').classList.remove('show');
+  document.getElementById('result-section').style.display='none';
+  document.getElementById('quiz-section').style.display='block';
+  showQ();
+}
+
+function showQ(){
+  if(!queue.length){showResult();return;}
+  const q=queue[0];
+  checked=false;tableVisible=false;
+  if(currentUtterance){window.speechSynthesis.cancel();}
+  document.getElementById('tense-wrap').classList.add('hidden');
+  document.getElementById('sentence-reveal').classList.add('hidden');
+  document.getElementById('feedback-wrap').innerHTML='';
+  const inp=document.getElementById('ans-input');
+  inp.value='';inp.className='answer-input';inp.disabled=false;
+  document.getElementById('btn-check').disabled=false;
+  document.getElementById('btn-next').disabled=true;
+  const total=isRetry?(wrongList.length+queue.length):ALL_Q.length;
+  const done=isRetry?wrongList.length:(ALL_Q.length-queue.length);
+  document.getElementById('q-counter').textContent=`${done+1} / ${total}`;
+  document.getElementById('prog').style.width=(total?Math.round((done/total)*100):0)+'%';
+  document.getElementById('verb-chip').textContent=q.v;
+  document.getElementById('sentence').innerHTML=q.s.replace('[B]','<b>______</b>');
+  document.getElementById('t-base').textContent=q.v;
+  document.getElementById('t-past').textContent=q.past;
+  document.getElementById('t-pp').textContent=q.pp;
+  document.getElementById('verb-chip-wrap').classList.toggle('hidden',currentMode==='listen');
+  const btn=document.getElementById('play-btn');
+  if(btn){btn.textContent='▶';btn.classList.remove('playing');}
+  setTimeout(()=>inp.focus(),100);
+}
+
+function checkAnswer(){
+  if(checked)return;
+  const q=queue[0];
+  const inp=document.getElementById('ans-input');
+  const userAns=inp.value.trim().toLowerCase();
+  const alts=getCorrect(q).toLowerCase().split('/').map(x=>x.trim());
+  const isOk=alts.includes(userAns);
+  checked=true;inp.disabled=true;
+  document.getElementById('btn-check').disabled=true;
+  document.getElementById('btn-next').disabled=false;
+  const fw=document.getElementById('feedback-wrap');
+  if(isOk){
+    inp.className='answer-input correct';
+    fw.innerHTML=`<div class="feedback-bar correct"><span>✓ 正確！答案是「${getCorrect(q)}」</span></div>`;
+    correct++;document.getElementById('sc').textContent=correct;
+    queue.shift();
+  } else {
+    inp.className='answer-input wrong';
+    fw.innerHTML=`<div class="feedback-bar wrong"><span>✗ 答錯了，正確答案是「${getCorrect(q)}」</span></div>`;
+    wrong++;document.getElementById('sw').textContent=wrong;
+    wrongList.push(q);queue.shift();
+  }
+  answered++;document.getElementById('sr').textContent=queue.length;
+  document.getElementById('tense-wrap').classList.remove('hidden');
+  tableVisible=true;
+  if(currentMode==='listen'){
+    const rev=document.getElementById('sentence-reveal');
+    rev.classList.remove('hidden');
+    rev.innerHTML='<b style="color:#185FA5;">'+q.v+'</b> &nbsp;―&nbsp; '+q.s.replace('[B]','<b>'+getCorrect(q)+'</b>');
+  }
+}
+
+function nextQ(){showQ();}
+
+function skipQ(){
+  if(checked){showQ();return;}
+  if(currentUtterance){window.speechSynthesis.cancel();}
+  const q=queue.shift();queue.push(q);showQ();
+}
+
+function toggleTable(){
+  tableVisible=!tableVisible;
+  document.getElementById('tense-wrap').classList.toggle('hidden',!tableVisible);
+}
+
+function showResult(){
+  if(currentUtterance){window.speechSynthesis.cancel();}
+  document.getElementById('quiz-section').style.display='none';
+  const rs=document.getElementById('result-section');
+  rs.style.display='flex';rs.classList.add('show');
+  const pct=answered?Math.round(correct/answered*100):0;
+  document.getElementById('result-emoji').textContent=pct===100?'🏆':pct>=80?'🎉':pct>=60?'💪':'📚';
+  document.getElementById('final-score').textContent=correct+' / '+answered;
+  document.getElementById('final-sub').textContent=
+    pct===100?'全對！完美表現！':
+    pct>=80?`答對率 ${pct}%，表現優秀！`:
+    pct>=60?`答對率 ${pct}%，繼續加油！`:
+    `答對率 ${pct}%，建議多加練習！`;
+  const btn=document.getElementById('btn-retry');
+  if(wrongList.length){
+    btn.style.display='block';
+    btn.textContent=`錯題重練（${wrongList.length} 題）`;
+    showWrongList();
+  } else {
+    btn.style.display='none';
+    document.getElementById('wrong-section').style.display='none';
+  }
+}
+
+function showWrongList(){
+  document.getElementById('wrong-section').style.display='block';
+  document.getElementById('wrong-items').innerHTML=wrongList.map(q=>`
+    <div class="wrong-item">
+      <div class="wrong-verb">${q.v}</div>
+      <div class="wrong-ans">${getCorrect(q)}</div>
+      <div class="wrong-full">${q.v} / ${q.past} / ${q.pp}</div>
+    </div>
+  `).join('');
+}
+
+function restartAll(){init(shuffle([...ALL_Q]),false);}
+function retryWrong(){if(wrongList.length){init(shuffle([...wrongList]),true);}}
+
+document.getElementById('ans-input').addEventListener('keydown',function(e){
+  if(e.key==='Enter'){if(!checked)checkAnswer();else nextQ();}
+});
+
+init(shuffle([...ALL_Q]),false);
+</script>
+</body>
+</html>
